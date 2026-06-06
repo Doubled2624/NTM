@@ -1,193 +1,188 @@
-# AI-IoT-Waste-Sorting-System
+# ♻️ Hệ thống phân loại rác tự động · YOLOv8 + Webcam Laptop + Cần gạt IoT
 
-Web system for automatic waste classification with camera AI and IoT servo sorting.
+<h2 align="center">
+    <a href="https://dainam.edu.vn/vi/khoa-cong-nghe-thong-tin">
+    🎓 Faculty of Information Technology - DaiNam University
+    </a>
+</h2>
 
-## Features
+<h2 align="center">
+   Smart Waste Sorter — AI-Powered Waste Classification System
+</h2>
 
-- React dashboard with realtime webcam capture, upload detection, bounding box overlay, confidence, voting state, statistics, and history.
-- FastAPI backend with OpenCV image decoding, YOLOv8 model loading, SQLite logs, and Arduino UNO servo gate control over USB Serial.
-- Error reduction logic:
-  - Accept only confident detections.
-  - Low confidence is classified as `other`.
-  - Uses an 8-frame voting window.
-  - Gate command is triggered only when the same waste type is stable for at least 6 consecutive frames and `confidence >= 0.75`.
-  - A 4 second cooldown avoids repeated gate commands for the same object.
-  - Every result is saved to SQLite and backend logs.
-- Arduino UNO SG90 servo sketch receives `O`, `R`, `I`, `H`, and `C` commands over Serial.
-- Arduino UNO servo control is isolated in `backend/arduino_gate.py`; if the board is unplugged/offline, camera, YOLO detection, dashboard, history, and statistics keep running.
+<div align="center">
+    <p align="center">
+        <img src="docs/aiotlab_logo.png" width="170"/>
+        <img src="docs/fitdnu_logo.png" width="180"/>
+        <img src="docs/dnu_logo.png" width="200"/>
+    </p>
 
-## Waste Classes
+[![AIoTLab](https://img.shields.io/badge/AIoTLab-green?style=for-the-badge)](https://www.facebook.com/DNUAIoTLab)
+[![Faculty of Information Technology](https://img.shields.io/badge/Faculty%20of%20Information%20Technology-blue?style=for-the-badge)](https://dainam.edu.vn/vi/khoa-cong-nghe-thong-tin)
+[![DaiNam University](https://img.shields.io/badge/DaiNam%20University-orange?style=for-the-badge)](https://dainam.edu.vn)
+[![Python](https://img.shields.io/badge/Python-3.10+-blue?style=for-the-badge&logo=python)](https://python.org)
+[![YOLOv8](https://img.shields.io/badge/YOLOv8-Object%20Detection-red?style=for-the-badge)](https://github.com/ultralytics/ultralytics)
+[![OpenCV](https://img.shields.io/badge/OpenCV-Computer%20Vision-green?style=for-the-badge&logo=opencv)](https://opencv.org)
+[![Arduino](https://img.shields.io/badge/Arduino-Uno-teal?style=for-the-badge&logo=arduino)](https://www.arduino.cc)
 
-| Class | Vietnamese | Servo angle |
-|---|---|---|
-| organic | huu co | 20 |
-| recyclable | tai che | 170 |
-| inorganic | vo co | 120 |
-| hazardous | nguy hai | 70 |
-| other | khong chac chan | no auto move |
+</div>
 
-Manual center/reset uses `90` degrees. For automatic sorting, the SG90 moves smoothly to the target angle, holds for about 1000 ms, then returns to `90` degrees to wait for the next item.
+---
 
-## Architecture
+# Smart Waste Sorter ♻️🤖
 
-```mermaid
-flowchart TD
-    A[Camera/Webcam] --> B[Web Frontend]
-    B --> C[FastAPI Backend]
-    C --> D[YOLO Waste Detection Model]
-    D --> E{AI detection complete}
-    E -- No --> F[Classify as Other / Request Retry]
-    E -- Yes --> G[Frame Voting Logic]
-    G --> H{Stable Result?}
-    H -- No --> I[Wait More Frames]
-    H -- Yes --> J[Save Result to Database]
-    J --> K{IoT enabled and stable?}
-    K --> L[Arduino UNO Serial Controller]
-    L --> M[Servo / Sorting Lever]
-    M --> N[Waste Bin]
-```
+**Smart Waste Sorter** là hệ thống phân loại rác tự động sử dụng **trí tuệ nhân tạo**, **webcam laptop**, **YOLOv8**, **dashboard thống kê** và **cơ cấu cần gạt IoT dùng Servo SG90**.
 
-## Backend Setup
+Hệ thống có nhiệm vụ nhận diện vật thể rác thông qua hình ảnh từ webcam, phân loại rác thành các nhóm cơ bản, hiển thị kết quả trên giao diện web và điều khiển cần gạt đưa rác về đúng ngăn chứa tương ứng.
 
-```bash
-cd backend
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
+> Đề tài tập trung vào mô hình phân loại rác quy mô nhỏ, phù hợp với đồ án học tập, dễ lắp ráp, dễ kiểm thử và dễ trình bày.
 
-For real YOLO/OpenCV inference, use Python 3.10-3.12 and install:
+---
 
-```bash
-pip install -r requirements-ai.txt
-```
+## 👤 Thông tin sinh viên
 
-Optional `.env`:
+| Thông tin | Nội dung |
+|---|---|
+| Họ tên | Bùi Tuấn Dương |
+| Mã sinh viên | 1671020071 |
+| Lớp | CNTT 16-03 |
+| Khoa | Công nghệ thông tin |
+| Trường | Đại học Đại Nam |
+| Địa điểm | Hà Nội, Việt Nam |
+| Email | buibanh2k4@gmail.com |
 
-```env
-ENABLE_IOT=true
-IOT_ENABLED=true
-SERVO_ENABLED=true
-ARDUINO_SERIAL_PORT=COM3
-ARDUINO_BAUD_RATE=9600
-ARDUINO_COMMAND_DELAY_SECONDS=0.2
-SERVO_CONFIDENCE_THRESHOLD=0.75
-SERVO_STABLE_FRAMES=6
-SERVO_COOLDOWN_SECONDS=4
-ESP8266_COMMAND_COOLDOWN_SECONDS=4
-IOT_COOLDOWN=4
-IOT_TIMEOUT_SECONDS=2
-IOT_TIMEOUT=2
-CONFIDENCE_THRESHOLD=0.35
-GATE_CONFIDENCE_THRESHOLD=0.75
-VOTING_WINDOW=8
-STABLE_VOTES=6
-STABLE_FRAME_REQUIRED=6
-COOLDOWN_SECONDS=4
-```
+---
 
-If `backend/models/best.pt` or AI dependencies are missing, the backend still starts and returns `other`/fallback results so the web app, database, and IoT flow can be tested.
+## 📌 Tóm tắt đề tài
 
-## Frontend Setup
+Đề tài xây dựng một hệ thống phân loại rác tự động dựa trên **AI**, **camera** và **IoT**. Webcam laptop được sử dụng để thu nhận hình ảnh vật thể rác trong vùng nhận diện. Hình ảnh sau đó được đưa vào mô hình **YOLOv8** để nhận diện và phân loại rác.
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+Sau khi hệ thống xác định được loại rác, kết quả sẽ được hiển thị trên dashboard gồm:
 
-Open the Vite URL, usually:
+- Loại rác vừa nhận diện.
+- Độ tin cậy của mô hình.
+- Tổng số lượng rác đã phân loại.
+- Số lượng từng loại rác.
+- Gợi ý xử lý phù hợp.
+- Trạng thái cần gạt IoT.
 
-```text
-http://localhost:5173
-```
+Phần IoT sử dụng **Arduino Uno** và **Servo SG90** để điều khiển cần gạt. Khi AI nhận diện được loại rác, chương trình Python gửi lệnh qua cổng USB Serial tới Arduino. Arduino điều khiển servo quay đến góc tương ứng để gạt rác, sau đó servo quay về vị trí ban đầu để chờ vật phẩm tiếp theo.
 
-If backend is not on `http://localhost:8000`, create `frontend/.env`:
+---
 
-```env
-VITE_API_BASE_URL=http://your-backend-ip:8000
-```
+## 🚫 Phạm vi không thực hiện
 
-## Arduino UNO SG90 Servo Setup
+Hệ thống này **không** tập trung vào các nội dung ngoài phạm vi bài toán phân loại rác.
 
-1. Open [iot/arduino_servo_gate/arduino_servo_gate.ino](iot/arduino_servo_gate/arduino_servo_gate.ino) in Arduino IDE.
-2. Install libraries:
-   - Servo
-3. Select Arduino UNO board and the correct COM port.
-4. Upload to Arduino UNO.
-5. Keep Arduino UNO connected to the laptop by USB.
-6. Set backend `.env`:
+Cụ thể:
 
-```env
-IOT_ENABLED=true
-ARDUINO_SERIAL_PORT=COM3
-ARDUINO_BAUD_RATE=9600
-```
+- Không sử dụng Blockchain.
+- Không sử dụng MetaMask.
+- Không sử dụng băng chuyền.
+- Không xử lý dữ liệu giao thông.
+- Không nhận diện biển số xe.
+- Không ước lượng tốc độ xe.
+- Không dùng mô hình robot phức tạp.
+- Không dùng hệ thống cơ khí công nghiệp.
+- Chỉ tập trung vào phân loại rác tự động bằng webcam, YOLOv8 và cần gạt servo.
 
-Servo wiring:
+---
 
-```text
-Servo orange/yellow signal wire -> Arduino UNO D9
-Servo red wire                  -> external 5V power supply
-Servo brown/black wire          -> external power supply GND
-External power supply GND       -> Arduino UNO GND
-Arduino UNO USB                 -> laptop running AI
-```
+## 🎯 Mục tiêu đề tài
 
-Do not plug the servo into the ICSP header. A light bench test can use the UNO 5V pin, but a real sorting lever should use an external 5V supply, and the Arduino UNO and servo supply must share GND.
+Mục tiêu chính của đề tài là xây dựng một hệ thống phân loại rác tự động có khả năng:
 
-Safe test flow:
+- Nhận hình ảnh rác từ webcam laptop.
+- Sử dụng YOLOv8 để nhận diện loại rác.
+- Phân loại rác thành bốn nhóm chính.
+- Hiển thị kết quả nhận diện trên dashboard.
+- Thống kê số lượng từng loại rác.
+- Đưa ra đề xuất xử lý cho từng loại rác.
+- Gửi lệnh điều khiển tới Arduino Uno.
+- Điều khiển Servo SG90 gạt rác vào đúng ngăn chứa.
+- Servo tự quay về vị trí ban đầu sau khi gạt xong.
+- Đảm bảo hệ thống đơn giản, dễ triển khai và phù hợp với đồ án sinh viên.
 
-1. Upload the Arduino UNO sketch.
-2. Open Serial Monitor at `9600`.
-3. Type these commands manually:
+---
+
+## 🗂️ Các nhóm rác trong hệ thống
+
+Hệ thống tập trung vào bốn nhóm rác chính:
+
+| STT | Nhóm rác | Tên class gợi ý | Ví dụ |
+|---:|---|---|---|
+| 1 | Nhựa | `plastic` | Chai nhựa, hộp nhựa, túi nhựa |
+| 2 | Kim loại | `metal` | Lon nước, hộp kim loại |
+| 3 | Thủy tinh | `glass` | Chai thủy tinh, lọ thủy tinh |
+| 4 | Hữu cơ | `organic` | Vỏ trái cây, lá cây, thức ăn thừa |
+
+---
+
+## 🧠 Công nghệ sử dụng
+
+| Thành phần | Công nghệ |
+|---|---|
+| Ngôn ngữ chính | Python |
+| Nhận diện vật thể | YOLOv8 |
+| Xử lý ảnh/video | OpenCV |
+| Camera đầu vào | Webcam laptop |
+| Giao diện | Web Dashboard |
+| Vi điều khiển | Arduino Uno |
+| Cơ cấu chấp hành | Servo SG90 |
+| Giao tiếp AI - Arduino | USB Serial |
+| Dataset | Ảnh rác đã gắn nhãn YOLO |
+| Thống kê | Python |
+| Điều khiển servo | Arduino C/C++ |
+
+---
+
+## 📁 Cấu trúc dự án đề xuất
 
 ```text
-O
-R
-I
-H
-C
-```
-
-4. Check Serial Monitor at `9600` for logs like `Organic detected -> servo 20 degree -> return 90 degree`.
-5. Close Serial Monitor so the backend can use the same COM port.
-6. Test backend APIs manually, then enable automatic YOLO triggering with `SERVO_ENABLED=true`.
-
-Automatic servo triggering rules:
-
-- `confidence >= 0.75`
-- same 4-class waste type stable for at least 6 frames
-- cooldown of 4 seconds before repeating the same type
-- low confidence, unknown, or `other` does not move the servo
-- after each valid sort command, the servo returns to `90` degrees automatically
-
-## API
-
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/` | Health and config |
-| POST | `/api/detect` | Upload image frame and receive detection |
-| POST | `/api/sort` | Manual sort command |
-| POST | `/api/iot/gate/left` | Manual Arduino UNO gate-left test |
-| POST | `/api/iot/gate/right` | Manual Arduino UNO gate-right test |
-| POST | `/api/iot/gate/home` | Manual Arduino UNO gate-home test |
-| GET | `/api/iot/status` | Arduino UNO connection, gate state, last command, and errors |
-| GET | `/api/iot/check` | Send `STATUS` over Serial to check Arduino UNO |
-| POST | `/api/servo/organic` | Move SG90 to 20 degrees |
-| POST | `/api/servo/recyclable` | Move SG90 to 170 degrees |
-| POST | `/api/servo/inorganic` | Move SG90 to 120 degrees |
-| POST | `/api/servo/hazardous` | Move SG90 to 70 degrees |
-| POST | `/api/servo/center` | Move SG90 to 90 degrees |
-| GET | `/api/servo/status` | Servo connection, angle, last command, last waste type, and error |
-| GET | `/api/stats` | Count by waste type |
-| GET | `/api/history?limit=50` | Recent detection logs |
-| POST | `/api/reset-voting` | Clear voting window |
-
-## Additional Diagrams
-
-- [System Architecture](diagrams/system_architecture.md)
-- [AI Flow](diagrams/ai_flow.md)
-- [IoT Flow](diagrams/iot_flow.md)
-- [Sequence Diagram](diagrams/sequence_diagram.md)
+smart-waste-sorter/
+│
+├── main.py                          # File chạy chính hệ thống AI
+├── web_app.py                       # Backend web/dashboard nếu có
+├── requirements.txt                 # Danh sách thư viện Python
+├── README.md                        # Tài liệu dự án
+│
+├── models/
+│   └── best.pt                      # Model YOLOv8 đã huấn luyện
+│
+├── src/
+│   ├── detector.py                  # Xử lý nhận diện rác bằng YOLOv8
+│   ├── camera.py                    # Đọc hình ảnh từ webcam laptop
+│   ├── waste_counter.py             # Thống kê số lượng từng loại rác
+│   ├── servo_controller.py          # Logic điều khiển servo/cần gạt
+│   ├── suggestions.py               # Gợi ý xử lý rác
+│   └── utils.py                     # Các hàm tiện ích
+│
+├── arduino_gate.py                  # Python gửi lệnh Serial tới Arduino Uno
+│
+├── arduino_servo_gate/
+│   └── arduino_servo_gate.ino       # Code Arduino Uno điều khiển Servo SG90
+│
+├── static/
+│   ├── index.html                   # Giao diện dashboard
+│   ├── style.css                    # Giao diện CSS
+│   └── script.js                    # Xử lý frontend
+│
+├── docs/
+│   ├── aiotlab_logo.png
+│   ├── fitdnu_logo.png
+│   ├── dnu_logo.png
+│   └── project photo/
+│       ├── 1.png
+│       ├── 2.png
+│       ├── 3.png
+│       ├── 4.png
+│       ├── 5.png
+│       ├── 6.png
+│       ├── 7.png
+│       └── 8.png
+│
+└── datasets/
+    ├── train/
+    ├── valid/
+    ├── test/
+    └── data.yaml
